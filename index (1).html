@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Toei Animation Legacy</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap">
+<style>
+/* Layout: one full-screen cinematic stage, 7 timed scenes + multiverse overlay, bottom timeline, top control bar */
+:root{--ink:#0b0a12;--ink2:#17142b;--paper:#efe3c4;--paper2:#d9c797;--red:#ff3b30;--cyan:#22d3ee;--sun:#ffd23f;--pink:#ff4fa3;--lime:#7CFC9a;--txt:#f6f1e4;
+--disp:'Dela Gothic One','Impact','Hiragino Sans',sans-serif;--body:'Zen Kaku Gothic New','Hiragino Sans','Segoe UI',sans-serif;--mono:'DotGothic16','Courier New',monospace;color-scheme:dark}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--ink);color:var(--txt);font-family:var(--body);overflow:hidden}
+body{padding:0!important}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+#stage{position:fixed;inset:0;overflow:hidden;background:var(--ink)}
+.scene{position:absolute;inset:0;display:none;overflow:hidden auto;padding:68px max(16px,4vw) 84px;opacity:0}
+.scene.on{display:flex;flex-direction:column;justify-content:safe center;align-items:center;opacity:1;animation:fadein .6s both}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.scene>*{max-width:1180px;width:100%}
+.paused *,.paused *::before,.paused *::after{animation-play-state:paused!important}
+.r{opacity:0}
+.on .r{animation:rise .9s cubic-bezier(.2,.8,.2,1) var(--d,0s) forwards}
+@keyframes rise{from{opacity:0;transform:translateY(26px) scale(.97)}to{opacity:1;transform:none}}
+.pop{opacity:0}.on .pop{animation:pop .7s cubic-bezier(.3,1.6,.5,1) var(--d,0s) forwards}
+@keyframes pop{from{opacity:0;transform:scale(.3) rotate(-8deg)}to{opacity:1;transform:none}}
+h1,h2,h3{font-family:var(--disp);font-weight:400;line-height:1.02;text-wrap:balance}
+h2{font-size:clamp(1.7rem,5vw,3.6rem)}
+.kick{font-family:var(--mono);letter-spacing:.25em;text-transform:uppercase;color:var(--sun);font-size:clamp(.75rem,1.6vw,1rem)}
+p.lead{font-size:clamp(.95rem,1.7vw,1.2rem);line-height:1.6;max-width:62ch;color:#e6dfcf}
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+#grain{position:fixed;inset:-50%;z-index:30;pointer-events:none;opacity:.14;mix-blend-mode:overlay;animation:grain .6s steps(6) infinite;
+background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+@keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-3%,2%)}40%{transform:translate(2%,-3%)}60%{transform:translate(-2%,-1%)}80%{transform:translate(3%,3%)}100%{transform:translate(0,0)}}
+#vig{position:fixed;inset:0;z-index:29;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.65))}
+.speed{position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.5;background:repeating-conic-gradient(from 0deg at 50% 50%,rgba(255,255,255,.0) 0 3deg,rgba(255,255,255,.09) 3deg 3.6deg);mask:radial-gradient(circle,transparent 25%,#000 75%);-webkit-mask:radial-gradient(circle,transparent 25%,#000 75%);animation:spin 40s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* top bar & timeline */
+#bar{position:fixed;top:0;left:0;right:0;z-index:40;display:flex;gap:8px;align-items:center;padding:10px max(12px,env(safe-area-inset-right,0px)) 10px max(12px,env(safe-area-inset-left,0px));background:linear-gradient(#000c,transparent)}
+#bar .brand{font-family:var(--mono);font-size:.8rem;letter-spacing:.15em;margin-right:auto;color:var(--sun)}
+.ib{background:#ffffff14;border:2px solid #ffffff55;border-radius:10px;padding:6px 11px;font-size:.85rem;font-weight:700;backdrop-filter:blur(6px)}
+.ib:hover,.ib[aria-pressed=true]{background:var(--sun);color:#111;border-color:var(--sun)}
+#prog{position:fixed;top:0;left:0;height:4px;width:0;background:linear-gradient(90deg,var(--red),var(--sun),var(--cyan));z-index:41}
+#tl{position:fixed;bottom:0;left:0;right:0;z-index:40;display:flex;justify-content:center;gap:4px;padding:10px 10px max(12px,env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,#000d)}
+#tl button{flex:1;max-width:150px;background:none;border:0;border-top:4px solid #ffffff44;padding:7px 2px 0;text-align:left;font-family:var(--mono);font-size:.7rem;color:#ffffffaa;transition:.3s}
+#tl button b{display:block;font-family:var(--disp);font-weight:400;font-size:.95rem;color:#fff}
+#tl button.cur{border-color:var(--sun);color:var(--sun)}
+#tl button.done{border-color:var(--red)}
+@media(max-width:640px){#tl button span{display:none}#tl button b{font-size:.78rem}.brand{display:none}}
+#wipe{position:fixed;inset:0;z-index:35;pointer-events:none;display:none;align-items:center;justify-content:center}
+#wipe.go{display:flex;animation:wipe 1s ease-in-out both}
+@keyframes wipe{0%{clip-path:polygon(0 0,0 0,-30% 100%,-30% 100%)}45%,55%{clip-path:polygon(0 0,130% 0,100% 100%,-30% 100%)}100%{clip-path:polygon(130% 0,130% 0,100% 100%,100% 100%)}}
+#wipe{background:repeating-linear-gradient(115deg,var(--red) 0 40px,var(--ink) 40px 80px)}
+#wipe svg{width:min(40vw,220px);animation:spin 1.2s linear infinite}
+#start{position:fixed;inset:0;z-index:60;background:#000;display:flex;flex-direction:column;gap:18px;align-items:center;justify-content:center;text-align:center;padding:20px}
+#start h1{font-size:clamp(1.6rem,6vw,3.4rem)}
+#start .big{background:var(--red);border:3px solid #fff;border-radius:6px;padding:14px 30px;font-family:var(--disp);font-size:1.2rem;box-shadow:6px 6px 0 var(--sun);transition:.15s}
+#start .big:hover{transform:translate(-2px,-2px);box-shadow:9px 9px 0 var(--sun)}
+/* panel */
+#panel{position:fixed;z-index:50;right:max(12px,env(safe-area-inset-right,0px));bottom:84px;width:min(420px,calc(100vw - 24px));background:var(--paper);color:#1b1408;border:3px solid #111;border-radius:6px;box-shadow:8px 8px 0 #000a;padding:18px 20px 20px;transform:translateY(30px) scale(.95);opacity:0;pointer-events:none;transition:.3s cubic-bezier(.3,1.4,.5,1);max-height:60vh;overflow:auto}
+#panel.show{transform:none;opacity:1;pointer-events:auto}
+#panel h3{font-size:1.5rem;margin-bottom:4px;color:#7a1410}
+#panel .yr{font-family:var(--mono);letter-spacing:.2em;font-size:.8rem;color:#5b4a22}
+#panel p{margin-top:8px;line-height:1.55;font-size:.95rem}
+#panel .x{position:absolute;top:8px;right:10px;background:none;border:0;font-size:1.4rem;color:#111}
+.chip{display:inline-block;margin-top:8px;padding:3px 10px;background:#111;color:var(--sun);font-family:var(--mono);font-size:.75rem;border-radius:20px}
+.hint{font-family:var(--mono);font-size:.8rem;color:#ffffffaa;margin-top:10px}
+svg text{font-family:var(--mono)}
+.ol{stroke:#15110a;stroke-width:3.5;stroke-linejoin:round;stroke-linecap:round}
+@media(max-width:640px){#bar{overflow-x:auto;flex-wrap:nowrap}.ib{white-space:nowrap;padding:5px 8px;font-size:.72rem;flex:none}.scene{padding-top:66px}}
+#cap{position:fixed;left:50%;bottom:76px;transform:translateX(-50%);z-index:38;max-width:min(820px,92vw);background:#000c;color:#fff;border-radius:8px;padding:8px 14px;font-size:clamp(.8rem,1.6vw,1.05rem);line-height:1.4;text-align:center;pointer-events:none;display:none}#cap.on{display:block}
+</style>
+</head>
+<body>
+<div id="prog"></div>
+<div id="stage">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<!-- ORIGINAL characters (generic archetypes) -->
+<symbol id="hero" viewBox="0 0 200 260"><g class="ol">
+<path d="M70 150 L52 250 L92 250 L100 185 L108 250 L148 250 L130 150Z" fill="#2b3a8c"/>
+<path d="M62 100 L138 100 L146 175 L54 175Z" fill="#ff8a1f"/><path d="M54 165 L146 165 L146 180 L54 180Z" fill="#2fb4e9"/>
+<path d="M62 105 L24 70 L40 56 L74 92Z" fill="#ff8a1f"/><path d="M138 105 L176 140 L162 156 L128 118Z" fill="#ff8a1f"/>
+<circle cx="24" cy="66" r="13" fill="#ffd0a6"/><circle cx="170" cy="150" r="13" fill="#ffd0a6"/>
+<path d="M66 54 L50 8 L84 34 L100 0 L116 34 L150 8 L134 54Z" fill="#14121c"/>
+<circle cx="100" cy="72" r="34" fill="#ffd0a6"/>
+<path d="M68 52 L100 62 L132 52 L130 40 L100 48 L70 40Z" fill="#14121c"/></g>
+<path d="M78 68 L94 74M122 68 L106 74" stroke="#14121c" stroke-width="5" stroke-linecap="round"/>
+<circle cx="86" cy="78" r="4.5" fill="#14121c"/><circle cx="114" cy="78" r="4.5" fill="#14121c"/>
+<path d="M88 94 Q100 102 112 94" stroke="#14121c" stroke-width="4" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="heroine" viewBox="0 0 200 260"><g class="ol">
+<path d="M64 60 Q10 70 20 190 Q50 150 62 100Z" fill="#ffd23f"/><path d="M136 60 Q190 70 180 190 Q150 150 138 100Z" fill="#ffd23f"/>
+<path d="M76 140 L124 140 L156 245 L44 245Z" fill="#ff4fa3"/><path d="M76 140 L124 140 L118 165 L82 165Z" fill="#fff"/>
+<path d="M92 148 L100 140 L108 148 L100 158Z" fill="#22d3ee"/>
+<path d="M82 112 L118 112 L124 142 L76 142Z" fill="#fff"/>
+<path d="M44 245 L156 245 L150 232 L50 232Z" fill="#c2185b"/>
+<path d="M120 124 L172 90" stroke="#15110a" stroke-width="6"/><path d="M172 66 L178 82 L196 82 L182 92 L188 108 L172 98 L156 108 L162 92 L148 82 L166 82Z" fill="#fff36b"/>
+<circle cx="100" cy="72" r="34" fill="#ffe0c4"/>
+<path d="M66 70 Q66 34 100 34 Q134 34 134 70 Q118 52 100 56 Q82 52 66 70Z" fill="#ffd23f"/></g>
+<ellipse cx="86" cy="80" rx="6" ry="9" fill="#2a60c8"/><ellipse cx="114" cy="80" rx="6" ry="9" fill="#2a60c8"/>
+<circle cx="88" cy="77" r="2.5" fill="#fff"/><circle cx="116" cy="77" r="2.5" fill="#fff"/>
+<path d="M92 96 Q100 102 108 96" stroke="#c2185b" stroke-width="3.5" fill="none" stroke-linecap="round"/></symbol>
+<symbol id="robot" viewBox="0 0 200 260"><g class="ol">
+<path d="M64 170 L56 250 L96 250 L100 190 L104 250 L144 250 L136 170Z" fill="#6b7a99"/>
+<path d="M50 96 L150 96 L142 180 L58 180Z" fill="#d6dbe8"/><rect x="80" y="116" width="40" height="34" fill="#ff3b30"/>
+<rect x="18" y="98" width="38" height="70" rx="8" fill="#9aa6c2"/><rect x="144" y="98" width="38" height="70" rx="8" fill="#9aa6c2"/>
+<path d="M70 92 L70 40 L130 40 L130 92Z" fill="#e9edf6"/><path d="M100 40 L84 0 L100 14 L116 0Z" fill="#ffd23f"/>
+<rect x="76" y="54" width="48" height="16" fill="#22d3ee"/></g>
+<rect x="84" y="58" width="12" height="8" fill="#fff"/><rect x="104" y="58" width="12" height="8" fill="#fff"/></symbol>
+<symbol id="pirate" viewBox="0 0 200 260"><g class="ol">
+<path d="M68 160 L58 250 L96 250 L100 195 L104 250 L142 250 L132 160Z" fill="#3a2a1d"/>
+<path d="M56 100 L144 100 L156 200 L44 200Z" fill="#0f6e76"/><path d="M88 100 L112 100 L100 150Z" fill="#fff"/>
+<path d="M56 108 L22 150 L38 164 L66 128Z" fill="#0f6e76"/><path d="M144 108 L176 90 L186 106 L150 130Z" fill="#0f6e76"/>
+<path d="M44 200 L156 200 L156 214 L44 214Z" fill="#ffd23f"/>
+<circle cx="100" cy="76" r="32" fill="#e8b48a"/>
+<path d="M60 56 L100 14 L140 56 L128 62 Q100 44 72 62Z" fill="#1d2b4a"/><path d="M96 20 Q60 -4 52 20" fill="none" stroke="#ff3b30" stroke-width="7"/>
+<path d="M62 60 L138 60 L134 70 L66 70Z" fill="#ff3b30"/></g>
+<path d="M76 76 L96 90" stroke="#111" stroke-width="5"/><circle cx="120" cy="82" r="5" fill="#111"/>
+<path d="M82 100 Q100 116 120 98" stroke="#111" stroke-width="4" fill="#fff" stroke-linecap="round"/></symbol>
+<symbol id="digi" viewBox="0 0 200 260"><g class="ol">
+<path d="M50 70 L36 20 L76 50Z" fill="#2c8cff"/><path d="M150 70 L164 20 L124 50Z" fill="#2c8cff"/>
+<ellipse cx="100" cy="150" rx="70" ry="82" fill="#2c8cff"/><ellipse cx="100" cy="170" rx="42" ry="52" fill="#d6f1ff"/>
+<path d="M100 66 L92 36 L108 36Z" fill="#ffd23f"/>
+<ellipse cx="42" cy="196" rx="20" ry="26" fill="#1e63c8" transform="rotate(20 42 196)"/><ellipse cx="158" cy="196" rx="20" ry="26" fill="#1e63c8" transform="rotate(-20 158 196)"/>
+<path d="M76 238 L56 252 L96 252Z" fill="#1e63c8"/><path d="M124 238 L144 252 L104 252Z" fill="#1e63c8"/></g>
+<ellipse cx="76" cy="118" rx="12" ry="16" fill="#fff"/><ellipse cx="124" cy="118" rx="12" ry="16" fill="#fff"/>
+<circle cx="78" cy="120" r="7" fill="#111"/><circle cx="122" cy="120" r="7" fill="#111"/>
+<path d="M82 146 Q100 166 118 146Z" fill="#fff" stroke="#111" stroke-width="4" stroke-linejoin="round"/></symbol>
+<symbol id="reel" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#1b1b1b" stroke="#fff" stroke-width="4"/>
+<g fill="#ffd23f"><circle cx="50" cy="22" r="11"/><circle cx="50" cy="78" r="11"/><circle cx="22" cy="50" r="11"/><circle cx="78" cy="50" r="11"/></g><circle cx="50" cy="50" r="7" fill="#fff"/></symbol>
+</defs></svg>
+<canvas id="fx"></canvas>
+
+<!-- SCENE 1 -->
+<section class="scene" id="s0" aria-label="Scene 1: The Beginning, 1948">
+ <div class="stack" style="display:grid;min-height:70vh">
+  <div class="s0a" style="grid-area:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;animation:fadeout 1s 8.2s forwards">
+   <svg viewBox="0 0 700 330" style="width:min(92vw,760px)">
+    <rect x="20" y="10" width="660" height="310" rx="6" fill="var(--paper)" stroke="var(--paper2)" stroke-width="6" class="r" style="--d:.2s"/>
+    <g stroke="#b9a56a" stroke-width="1" opacity=".7"><path d="M20 80H680M20 160H680M20 240H680"/></g>
+    <g fill="#8a7640"><circle cx="60" cy="30" r="7"/><circle cx="350" cy="30" r="7"/><circle cx="640" cy="30" r="7"/></g>
+    <path id="pencil" d="M60 250 C150 250 160 170 250 200 S330 260 380 190" fill="none" stroke="#2b2418" stroke-width="4" stroke-linecap="round" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" style="animation:draw 3s 1.2s ease-in-out forwards"/>
+    <g style="clip-path:inset(0 100% 0 0);animation:unclip 2.6s 4.2s steps(14) forwards">
+     <use href="#hero" x="400" y="40" width="200" height="260" style="filter:grayscale(1) contrast(1.3)"/></g>
+    <g style="opacity:0;animation:rise .8s 7s forwards"><use href="#hero" x="400" y="40" width="200" height="260"/></g>
+    <circle r="7" fill="#444" style="offset-path:path('M60 250 C150 250 160 170 250 200 S330 260 380 190');animation:ride 3s 1.2s ease-in-out forwards;opacity:0"/>
+   </svg>
+   <h1 class="r" style="--d:3.4s;font-size:clamp(1.6rem,5.5vw,3.8rem);text-align:center">EVERY LEGEND<br>HAS A BEGINNING.</h1>
+  </div>
+  <div class="s0b" style="grid-area:1/1;display:flex;flex-direction:column;justify-content:center;gap:18px">
+   <div class="kick r" style="--d:8.6s">Scene 1 · The Beginning</div>
+   <h2 class="r" style="--d:8.8s;font-size:clamp(3.5rem,14vw,9rem);color:var(--sun);text-shadow:6px 6px 0 var(--red)">1948</h2>
+   <h2 class="r" style="--d:9.2s">NIHON DŌGA <span style="font-size:.5em;color:var(--cyan)">日本動画</span></h2>
+   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;align-items:start">
+    <p class="lead r" style="--d:9.8s">Founded in 1948 as <b>Nihon Dōga</b> ("Japan Animated Films") by Kenzō Masaoka and Zenjirō Yamamoto, with the goal of building a Japanese animation industry on the scale of the big American studios. Every frame was drawn by hand.</p>
+    <p class="lead r" style="--d:10.6s">It became <b>Toei Dōga</b> only in <b>1956</b>, when Toei Company acquired it. The name <b>Toei Animation</b> followed in <b>1998</b>.</p>
+    <svg viewBox="0 0 300 190" class="r" style="--d:11.2s;width:100%;max-width:340px" aria-label="Light table and flipbook of hand-drawn frames">
+     <path d="M20 150 L60 70 L260 70 L280 150Z" fill="#2a2440" stroke="#fff" stroke-width="3"/>
+     <path d="M60 70 L260 70 L250 60 L70 60Z" fill="#fff6c9" opacity=".9"/>
+     <g stroke="#fff" fill="#efe3c4"><rect x="95" y="82" width="110" height="60" transform="skewX(-8)"/></g>
+     <g fill="#333" ><circle cx="120" cy="90" r="3"/><circle cx="150" cy="90" r="3"/><circle cx="180" cy="90" r="3"/></g>
+     <g stroke="#15110a" stroke-width="3" fill="none" stroke-linecap="round"><circle cx="140" cy="115" r="12" style="animation:flip 1.2s steps(1) infinite"/><path d="M152 115 q10 -10 18 0" style="animation:flip 1.2s .6s steps(1) infinite"/></g>
+     <rect x="14" y="150" width="272" height="14" fill="#8a5a2b" stroke="#fff" stroke-width="2"/>
+     <text x="150" y="184" text-anchor="middle" fill="#fff" font-size="11">LIGHT TABLE · PEG BAR · PENCIL</text>
+    </svg>
+   </div>
+   <button class="ib r" style="--d:12s;align-self:flex-start" data-info="1948">▶ More on 1948</button>
+  </div>
+ </div>
+</section>
+<style>@keyframes draw{to{stroke-dashoffset:0}}@keyframes unclip{to{clip-path:inset(0 0 0 0)}}@keyframes fadeout{to{opacity:0;visibility:hidden}}
+@keyframes ride{0%{offset-distance:0;opacity:1}99%{opacity:1}100%{offset-distance:100%;opacity:0}}@keyframes flip{50%{opacity:0}}</style>
+
+<!-- SCENE 2 -->
+<section class="scene" id="s1" aria-label="Scene 2: Building a Legacy">
+ <div class="speed"></div>
+ <div class="kick r" style="--d:.3s">Scene 2 · 1956–1970s</div>
+ <h2 class="r" style="--d:.5s;margin:8px 0 6px">BUILDING A LEGACY</h2>
+ <p class="lead r" style="--d:.8s;margin-bottom:18px">From theatrical colour films to weekly television, and out across the world. Tap a card for the story.</p>
+ <div id="reelrow" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;position:relative;z-index:3">
+  <button class="card r" style="--d:1s" data-info="1956"><div class="film"><svg viewBox="0 0 200 120"><rect width="200" height="120" fill="#243b6b"/><rect x="20" y="44" width="160" height="56" fill="#efe3c4" stroke="#111" stroke-width="3"/><text x="100" y="78" text-anchor="middle" font-size="16" fill="#7a1410">東映動画</text><path d="M20 44 L100 14 L180 44" fill="#c0392b" stroke="#111" stroke-width="3"/></svg></div><i>1956</i><b>Toei acquires the studio</b></button>
+  <button class="card r" style="--d:1.4s" data-info="1958"><div class="film"><svg viewBox="0 0 200 120"><rect width="200" height="120" fill="#0f5a5a"/><path d="M-10 90 C40 20 70 120 110 60 S170 30 215 70" stroke="#fff" stroke-width="16" fill="none" stroke-linecap="round"/><circle cx="196" cy="68" r="6" fill="#ff3b30"/></svg></div><i>1958</i><b>The White Snake</b></button>
+  <button class="card r" style="--d:1.8s" data-info="1963"><div class="film"><svg viewBox="0 0 200 120"><rect width="200" height="120" fill="#5a3a1a"/><g transform="translate(24,6) scale(.4)"><use href="#hero" width="200" height="260" style="filter:sepia(1) saturate(1.4)"/></g><path d="M110 100 Q130 50 160 70 L180 50 L176 82 Q184 100 150 104Z" fill="#cfcfcf" stroke="#111" stroke-width="3"/></svg></div><i>1963</i><b>Ken, the Wild Boy</b></button>
+  <button class="card r" style="--d:2.2s" data-info="1972"><div class="film"><svg viewBox="0 0 200 120"><rect width="200" height="120" fill="#2b1650"/><g transform="translate(66,0) scale(.46)"><use href="#robot" width="200" height="260"/></g><path d="M0 100 L200 100" stroke="#ff3b30" stroke-width="4"/></svg></div><i>1972</i><b>Mazinger Z</b></button>
+  <button class="card r" style="--d:2.6s" data-info="1979"><div class="film"><svg viewBox="0 0 200 120"><rect width="200" height="120" fill="#050a22"/><g fill="#fff"><circle cx="20" cy="20" r="1.5"/><circle cx="80" cy="30" r="1.5"/><circle cx="160" cy="14" r="2"/><circle cx="130" cy="50" r="1.5"/></g><rect x="30" y="62" width="120" height="26" rx="12" fill="#c0c7d6" stroke="#111" stroke-width="3"/><circle cx="152" cy="75" r="14" fill="#ffd23f" stroke="#111" stroke-width="3"/><path d="M0 104 H200" stroke="#7a8bb5" stroke-width="3" stroke-dasharray="10 6"/></svg></div><i>1979</i><b>Galaxy Express 999</b></button>
+ </div>
+ <div class="r" style="--d:3.2s;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:16px;position:relative;z-index:3">
+  <p class="lead">📽 <b>Theatre first.</b> Toei Dōga set out to make colour feature films for the family audience.</p>
+  <p class="lead">📺 <b>Then television.</b> From 1963 weekly TV series made animation a daily habit.</p>
+  <p class="lead">🌍 <b>Then abroad.</b> Series such as Mazinger Z found large audiences in Europe and beyond.</p>
+ </div>
+</section>
+<style>
+.card{background:var(--paper);color:#1b1408;border:3px solid #111;border-radius:4px;box-shadow:6px 6px 0 #000a;padding:10px 10px 12px;text-align:left;display:flex;flex-direction:column;gap:4px;transition:.2s}
+.card:hover,.card.hl{transform:translate(-3px,-3px) rotate(-.6deg);box-shadow:10px 10px 0 var(--red);background:#fff4d2}
+.card i{font-family:var(--mono);font-style:normal;color:#7a1410;letter-spacing:.2em;font-size:.8rem}.card b{font-family:var(--disp);font-weight:400;font-size:1.05rem;line-height:1.1}
+.film{border:6px solid #111;border-left:10px dashed #111;border-right:10px dashed #111;background:#111;line-height:0}.film svg{width:100%}
+</style>
+<!-- SCENE 3 -->
+<section class="scene" id="s2" aria-label="Scene 3: The Golden Era">
+ <div class="speed" style="background:repeating-conic-gradient(from 0deg,transparent 0 3deg,rgba(255,210,63,.12) 3deg 3.7deg)"></div>
+ <div class="kick r" style="--d:.2s">Scene 3 · 1980s–2000s</div>
+ <h2 class="r" style="--d:.4s;margin:6px 0 4px;color:var(--sun);text-shadow:4px 4px 0 var(--red)">THE GOLDEN ERA</h2>
+ <p class="lead r" style="--d:.6s;margin-bottom:14px">Six franchises that carried Toei to living rooms around the world. The heroes shown are original stand-ins for each genre.</p>
+ <div id="gold" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px;position:relative;z-index:3">
+  <button class="card pop" style="--d:1s" data-info="db"><svg viewBox="0 0 200 260" style="height:150px"><use href="#hero" width="200" height="260"/></svg><i>1986</i><b>Dragon Ball</b><em>Martial-arts hero</em></button>
+  <button class="card pop" style="--d:1.9s" data-info="ss"><svg viewBox="0 0 200 260" style="height:150px"><use href="#robot" width="200" height="260" style="filter:hue-rotate(160deg) saturate(1.4)"/></svg><i>1986</i><b>Saint Seiya</b><em>Armoured warrior</em></button>
+  <button class="card pop" style="--d:2.8s" data-info="sm"><svg viewBox="0 0 200 260" style="height:150px"><use href="#heroine" width="200" height="260"/></svg><i>1992</i><b>Sailor Moon</b><em>Magical heroine</em></button>
+  <button class="card pop" style="--d:3.7s" data-info="dg"><svg viewBox="0 0 200 260" style="height:150px"><use href="#digi" width="200" height="260"/></svg><i>1999</i><b>Digimon Adventure</b><em>Digital companion</em></button>
+  <button class="card pop" style="--d:4.6s" data-info="op"><svg viewBox="0 0 200 260" style="height:150px"><use href="#pirate" width="200" height="260"/></svg><i>1999</i><b>One Piece</b><em>Adventurous pirate</em></button>
+  <button class="card pop" style="--d:5.5s" data-info="pc"><svg viewBox="0 0 200 260" style="height:150px"><use href="#heroine" width="200" height="260" style="filter:hue-rotate(150deg) saturate(1.3)"/></svg><i>2004</i><b>Pretty Cure</b><em>Heroine team-up</em></button>
+ </div>
+ <p class="lead r" style="--d:6.5s;margin-top:14px;position:relative;z-index:3">These shows were exported to dozens of countries, and for many viewers they were their first contact with Japanese animation. That is how Toei's name became known well beyond Japan.</p>
+</section>
+<style>.card svg{width:100%;background:radial-gradient(#fff6,transparent 70%)}.card em{font-size:.8rem;color:#5b4a22;font-style:normal}</style>
+
+<!-- SCENE 4 -->
+<section class="scene" id="s3" aria-label="Scene 4: The Digital Revolution">
+ <div class="kick r" style="--d:.2s">Scene 4 · From cels to pixels</div>
+ <h2 class="r" style="--d:.4s;margin:6px 0 10px">THE DIGITAL REVOLUTION</h2>
+ <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;align-items:start">
+  <div class="r" style="--d:.8s">
+   <div id="cmp" style="position:relative;aspect-ratio:16/10;border:4px solid #fff;border-radius:6px;overflow:hidden;--p:50%;background:#000">
+    <svg viewBox="0 0 640 400" style="position:absolute;inset:0;width:100%;height:100%" aria-label="Traditional animation desk">
+     <rect width="640" height="400" fill="#5a3f22"/><rect x="40" y="30" width="560" height="300" fill="#d9c797" stroke="#2b2418" stroke-width="4"/>
+     <g stroke="#2b2418" stroke-width="2" opacity=".35"><path d="M40 90H600M40 150H600M40 210H600"/></g>
+     <g transform="translate(220,50) scale(.8)"><use href="#hero" width="200" height="260" style="filter:grayscale(1) contrast(1.4) brightness(1.3)"/></g>
+     <g transform="translate(420,200) rotate(-10)"><rect width="140" height="90" fill="#bfe7ff" opacity=".7" stroke="#111" stroke-width="3"/><circle cx="50" cy="45" r="22" fill="#ff8a1f"/><text x="6" y="82" font-size="11" fill="#111">CEL · PAINTED</text></g>
+     <rect x="60" y="340" width="520" height="30" fill="#2b1c0e"/><path d="M90 338 l60 -40 l10 8 l-60 40Z" fill="#ffd23f" stroke="#111" stroke-width="3"/>
+     <text x="24" y="392" fill="#fff" font-size="16">TRADITIONAL · paper · cels · camera stand</text></svg>
+    <div id="dig" style="position:absolute;inset:0;clip-path:inset(0 0 0 var(--p));background:#0d1224">
+     <svg viewBox="0 0 640 400" style="position:absolute;inset:0;width:100%;height:100%" aria-label="Digital studio">
+      <rect width="640" height="400" fill="#0d1224"/>
+      <g stroke="#22d3ee" stroke-width="1" opacity=".25"><path d="M0 300H640M0 330H640M0 360H640M120 280V400M320 270V400M520 280V400"/></g>
+      <rect x="30" y="30" width="400" height="260" rx="10" fill="#1a2140" stroke="#22d3ee" stroke-width="3"/>
+      <g transform="translate(130,40) scale(.85)"><use href="#hero" width="200" height="260"/></g>
+      <path d="M40 270 Q130 200 250 245 T420 260" stroke="#ff4fa3" stroke-width="3" fill="none" stroke-dasharray="6 5"/>
+      <g transform="translate(450,30)"><rect width="160" height="260" rx="8" fill="#141a33" stroke="#7c86b8" stroke-width="2"/>
+       <g font-size="11" fill="#cfe"><text x="10" y="26">LAYERS</text><rect x="10" y="36" width="140" height="22" fill="#2a3566"/><text x="18" y="52">Character · cel</text><rect x="10" y="64" width="140" height="22" fill="#2a3566"/><text x="18" y="80">3DCG background</text><rect x="10" y="92" width="140" height="22" fill="#2a3566"/><text x="18" y="108">Effects · glow</text><rect x="10" y="120" width="140" height="22" fill="#2a3566"/><text x="18" y="136">Composite · grade</text></g>
+       <polygon points="20,190 60,150 100,190 140,160 140,240 20,240" fill="#22d3ee33" stroke="#22d3ee" stroke-width="2"/></g>
+      <rect x="480" y="320" width="130" height="60" rx="8" fill="#111" stroke="#fff" stroke-width="3"/><path d="M500 360 l40 -30" stroke="#ffd23f" stroke-width="6" stroke-linecap="round"/>
+      <text x="616" y="392" fill="#fff" font-size="16" text-anchor="end">DIGITAL · tablet · 3DCG · compositing</text></svg></div>
+    <div id="hnd" style="position:absolute;top:0;bottom:0;left:var(--p);width:4px;background:var(--sun);transform:translateX(-2px);pointer-events:none"><span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--sun);color:#111;border-radius:50%;width:34px;height:34px;display:grid;place-items:center;font-weight:900">⇔</span></div>
+   </div>
+   <input id="cmpr" type="range" min="0" max="100" value="50" aria-label="Compare traditional and digital production" style="width:100%;margin-top:8px;accent-color:#ffd23f">
+  </div>
+  <div class="r" style="--d:1.2s;display:flex;flex-direction:column;gap:8px" id="steps">
+   <p class="lead" style="margin-bottom:4px">Drag the slider, then tap a step. Both workflows still start with a drawing.</p>
+   <button class="step" data-info="st0"><i>1</i>Artists drawing on paper</button>
+   <button class="step" data-info="st1"><i>2</i>Animation cels coloured</button>
+   <button class="step" data-info="st2"><i>3</i>Computer-assisted animation</button>
+   <button class="step" data-info="st3"><i>4</i>Digital drawing tablets</button>
+   <button class="step" data-info="st4"><i>5</i>CGI environments</button>
+   <button class="step" data-info="st5"><i>6</i>Digital compositing</button>
+   <button class="step" data-info="st6"><i>7</i>Modern production workflow</button>
+  </div>
+ </div>
+</section>
+<style>.step{display:flex;gap:12px;align-items:center;text-align:left;background:#ffffff10;border:2px solid #ffffff44;border-radius:8px;padding:8px 12px;font-weight:700;transition:.2s}
+.step i{font-style:normal;font-family:var(--disp);background:var(--red);border-radius:50%;width:28px;height:28px;display:grid;place-items:center;flex:none}
+.step:hover,.step.hl{background:var(--sun);color:#111;border-color:var(--sun)}</style>
+
+<!-- SCENE 5 -->
+<section class="scene" id="s4" aria-label="Scene 5: Reaching the World">
+ <div class="kick r" style="--d:.2s">Scene 5 · Distribution</div>
+ <h2 class="r" style="--d:.4s;margin:6px 0 10px">REACHING THE WORLD</h2>
+ <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:center">
+  <div class="r" style="--d:.6s;position:relative;aspect-ratio:1;max-width:520px;width:100%;margin:auto"><canvas id="globe" style="width:100%;height:100%"></canvas></div>
+  <div class="r" style="--d:1s">
+   <svg viewBox="0 0 440 400" style="width:100%;max-width:520px" aria-label="Distribution channels">
+    <g stroke="#ffffff55" stroke-width="2" fill="none" id="hubl"></g>
+    <circle cx="220" cy="200" r="52" fill="var(--red)" stroke="#fff" stroke-width="4"/><text x="220" y="196" text-anchor="middle" fill="#fff" font-size="16">TOEI</text><text x="220" y="216" text-anchor="middle" fill="#fff" font-size="12">ANIMATION</text>
+    <g id="hubn"></g></svg>
+   <p class="lead" id="hubnote" style="margin-top:6px">Every branch feeds the others: a TV hit sells discs, games and toys, which bring new viewers back to the show. Tap a branch.</p>
+  </div>
+ </div>
+</section>
+<!-- SCENE 6 -->
+<section class="scene" id="s5" aria-label="Scene 6: The Impact on Society">
+ <div class="kick r" style="--d:.2s">Scene 6 · Why the stories matter</div>
+ <h2 class="r" style="--d:.4s;margin:6px 0 10px">THE IMPACT ON SOCIETY</h2>
+ <div style="display:flex;justify-content:center;gap:4px;flex-wrap:wrap;margin-bottom:8px">
+  <svg viewBox="0 0 200 260" class="bob pop" style="--d:.6s;height:110px"><use href="#hero" width="200" height="260"/></svg>
+  <svg viewBox="0 0 200 260" class="bob pop" style="--d:.8s;height:110px;animation-delay:.2s"><use href="#heroine" width="200" height="260"/></svg>
+  <svg viewBox="0 0 200 260" class="bob pop" style="--d:1s;height:110px"><use href="#digi" width="200" height="260"/></svg>
+  <svg viewBox="0 0 200 260" class="bob pop" style="--d:1.2s;height:110px"><use href="#pirate" width="200" height="260"/></svg>
+  <svg viewBox="0 0 200 260" class="bob pop" style="--d:1.4s;height:110px"><use href="#robot" width="200" height="260"/></svg>
+ </div>
+ <div id="vals" style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;position:relative;z-index:3">
+  <button class="vchip r" style="--d:1.6s" data-info="v0">Friendship</button><button class="vchip r" style="--d:1.8s" data-info="v1">Courage</button>
+  <button class="vchip r" style="--d:2s" data-info="v2">Perseverance</button><button class="vchip r" style="--d:2.2s" data-info="v3">Creativity</button>
+  <button class="vchip r" style="--d:2.4s" data-info="v4">Cultural exchange</button><button class="vchip r" style="--d:2.6s" data-info="v5">Imagination</button>
+  <button class="vchip r" style="--d:2.8s" data-info="v6">Global communities</button>
+ </div>
+ <p class="lead r" id="valnote" style="--d:3s;text-align:center;margin:12px auto 0;position:relative;z-index:3;min-height:3.4em">Tap a value to see how a Toei story carries it.</p>
+ <blockquote class="r" style="--d:4s;margin-top:18px;text-align:center;font-family:var(--disp);font-size:clamp(1.2rem,3.6vw,2.3rem);line-height:1.2;color:var(--sun);position:relative;z-index:3;text-wrap:balance">“Delivering dreams and hope to children and people around the world.”<footer style="font-family:var(--mono);font-size:.8rem;color:#fff;margin-top:6px;letter-spacing:.2em">TOEI ANIMATION · CORPORATE PHILOSOPHY</footer></blockquote>
+</section>
+<style>.bob{animation:bob 2.4s ease-in-out infinite}@keyframes bob{50%{transform:translateY(-8px)}}
+.vchip{background:var(--pink);border:3px solid #fff;border-radius:40px;padding:7px 16px;font-family:var(--disp);font-size:.95rem;box-shadow:4px 4px 0 #000;transition:.2s}
+.vchip:hover,.vchip.hl{background:var(--sun);color:#111;transform:scale(1.08) rotate(-2deg)}</style>
+
+<!-- SCENE 7 -->
+<section class="scene" id="s6" aria-label="Scene 7: The Tribute" style="padding:0">
+ <canvas id="fin" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+ <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:70px 20px;pointer-events:none;z-index:3;max-width:none">
+  <div class="kick r" style="--d:.5s">Scene 7 · The Tribute</div>
+  <h2 style="opacity:0;animation:rise 1.2s 5s forwards, fadeout 1s 12s forwards;font-size:clamp(1.7rem,6vw,4.4rem);color:var(--sun);text-shadow:5px 5px 0 var(--red);max-width:18ch">FROM A SINGLE DRAWING TO MILLIONS OF DREAMS.</h2>
+  <h2 class="fin2" style="font-size:clamp(1.5rem,5vw,3.6rem);max-width:20ch">TOEI ANIMATION – A LEGACY THAT CONTINUES.</h2>
+  <div class="fin3" style="font-family:var(--disp);font-size:clamp(2rem,8vw,5rem);letter-spacing:.06em">1948 – 2026</div>
+  <button class="ib fin4" id="replay" style="pointer-events:auto">↺ Watch again</button>
+ </div>
+</section>
+<style>.fin2,.fin3,.fin4{opacity:0}.on .fin2{animation:rise 1.2s 13s forwards}.on .fin3{animation:rise 1.4s 15.5s forwards}.on .fin4{animation:rise 1s 18s forwards}
+#s6.on h2:first-of-type{}</style>
+
+<!-- MULTIVERSE -->
+<div id="mv" hidden style="position:fixed;inset:0;z-index:45;background:radial-gradient(circle at 50% 30%,#3a1d6e,#0b0a12 70%);overflow:auto;padding:70px max(16px,4vw) 90px">
+ <div style="max-width:1000px;margin:auto;text-align:center">
+  <div class="kick">Bonus level</div><h2>THE ANIME MULTIVERSE</h2>
+  <p class="lead" style="margin:8px auto 18px">Four original stand-ins, one for each genre. Click a character to meet the franchise behind it.</p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px">
+   <button class="card mvc" data-mv="0"><svg viewBox="0 0 200 260" style="height:170px"><use href="#hero" width="200" height="260"/></svg><b>Master Fist</b></button>
+   <button class="card mvc" data-mv="1"><svg viewBox="0 0 200 260" style="height:170px"><use href="#heroine" width="200" height="260"/></svg><b>Starlight Sprite</b></button>
+   <button class="card mvc" data-mv="2"><svg viewBox="0 0 200 260" style="height:170px"><use href="#pirate" width="200" height="260"/></svg><b>Captain Hatless</b></button>
+   <button class="card mvc" data-mv="3"><svg viewBox="0 0 200 260" style="height:170px"><use href="#digi" width="200" height="260"/></svg><b>Blobmon</b></button>
+  </div>
+  <div id="mvinfo" style="margin:20px auto 0;max-width:640px;background:var(--paper);color:#1b1408;border:3px solid #111;border-radius:6px;box-shadow:8px 8px 0 var(--red);padding:16px 20px;text-align:left;min-height:130px"><i style="font-family:var(--mono);color:#7a1410">Pick a character…</i></div>
+  <button id="egg" class="ib" style="margin-top:18px" title="Optional Easter egg">⚡ Secret: who would win?</button>
+  <div id="eggbox" hidden style="margin:14px auto 0;max-width:640px;background:#000;border:3px dashed var(--sun);border-radius:8px;padding:16px">
+   <svg viewBox="0 0 640 220" style="width:100%"><rect width="640" height="220" fill="#1b1740"/>
+    <g id="egL" style="animation:dash 1.6s ease-in-out infinite alternate"><use href="#hero" x="60" y="30" width="150" height="195"/></g>
+    <g id="egR" style="animation:dash2 1.6s ease-in-out infinite alternate"><use href="#heroine" x="430" y="30" width="150" height="195"/></g>
+    <text x="320" y="110" text-anchor="middle" font-size="54" fill="#ffd23f" style="font-family:var(--disp);animation:vs 1.6s infinite alternate;transform-origin:320px 100px">VS</text></svg>
+   <p class="lead" style="margin:8px auto;text-align:center">A nod to the famous “Goku vs Sailor Moon” debate. Verdict: a draw. Both are Toei icons, and both are far too busy saving the day to fight.</p>
+  </div>
+ </div>
+</div>
+<style>.mvc{align-items:center;text-align:center}.mvc b{font-size:.9rem}
+@keyframes dash{to{transform:translateX(70px)}}@keyframes dash2{to{transform:translateX(-70px)}}@keyframes vs{to{transform:scale(1.4) rotate(6deg)}}</style>
+<div id="wipe" aria-hidden="true"><svg viewBox="0 0 100 100"><use href="#reel"/></svg></div>
+</div>
+<div id="panel" role="dialog" aria-live="polite" aria-label="Information"><button class="x" aria-label="Close">×</button><div class="yr" id="p-yr"></div><h3 id="p-h"></h3><p id="p-p"></p><span class="chip" id="p-c"></span></div>
+<div id="bar"><span class="brand">TOEI ANIMATION · 1948–2026</span>
+ <button class="ib" id="bPrev" aria-label="Previous scene">◀</button><button class="ib" id="bPlay" aria-label="Pause">❚❚ Pause</button><button class="ib" id="bNext" aria-label="Next scene">▶</button>
+ <button class="ib" id="bRe">↺ Restart</button><button class="ib" id="bVo" aria-pressed="true">🎙 Voice on</button><button class="ib" id="bSnd" aria-pressed="false">♪ Sound off</button><button class="ib" id="bRm" aria-pressed="false">Reduce motion</button><button class="ib" id="bMv" aria-pressed="false">✦ Multiverse</button></div>
+<div id="cap" aria-live="off"></div><nav id="tl" aria-label="Historical periods"></nav>
+<div id="grain"></div><div id="vig"></div>
+<div id="start"><div class="kick">An interactive animated tribute</div><h1>TOEI ANIMATION<br><span style="color:var(--sun)">A LEGACY OF DREAMS</span></h1><p class="hint">1948 – 2026 · Use ◀ ▶ keys, scroll or the timeline to move between eras</p><button class="big" id="go">▶ START</button><p class="hint">Fan-made tribute with original artwork. Not affiliated with Toei Animation.</p></div>
+<style>.rm *,.rm *::before,.rm *::after{animation-duration:.001s!important;animation-delay:0s!important;animation-iteration-count:1!important;transition:none!important}.rm #grain{display:none}.rm .speed{animation:none}</style>
+<script>
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const INFO={
+'1948':['1948','Nihon Dōga is born','Founded in 1948 as Nihon Dōga ("Japan Animated Films") by Kenzō Masaoka and Zenjirō Yamamoto, with the ambition of making high-quality animation in Japan. Work was done by hand: pencil drawings on paper, shot frame by frame under a camera stand.','Founding year'],
+'1956':['1956','Toei Company acquires the studio','Toei Company took over Nihon Dōga in 1956 and renamed it Toei Dōga. This, not 1948, is the year of the Toei name. The studio was renamed Toei Animation in 1998.','Incorporation as Toei Dōga'],
+'1958':['1958','The White Snake (Hakujaden)','Based on a Chinese legend, it was Japan\'s first full-length colour animated feature film. It was shown abroad too, and showed that Japanese animation could be made at feature scale.','Theatrical milestone'],
+'1963':['1963','Ken, the Wild Boy (Ōkami Shōnen Ken)','One of the first Japanese TV animation series and the first for Toei, produced on a weekly schedule. It marked the move from occasional films to a steady television pipeline.','Television begins'],
+'1972':['1972','Mazinger Z','Created by Go Nagai, it popularised the "super robot" in which the hero rides inside the machine. Its export to Europe and Latin America helped begin Japan\'s global mecha boom.','Robots & export'],
+'1979':['1979','Galaxy Express 999 (film)','Leiji Matsumoto\'s space-train fantasy first aired as a TV series in 1978, then reached cinemas in 1979 as a Toei film and became a major box-office success in Japan.','Cinematic sci-fi'],
+'db':['1986','Dragon Ball','Akira Toriyama\'s martial-arts adventure began on TV in 1986. Together with its sequels it became one of the best-known animated franchises on Earth.','Martial arts · TV'],
+'ss':['1986','Saint Seiya','Based on Masami Kurumada\'s manga, warriors in mythic armour fight for justice. It was hugely popular in France, Latin America and beyond.','Armour & mythology'],
+'sm':['1992','Sailor Moon','Naoko Takeuchi\'s heroine team defined the modern "magical girl" genre and was broadcast around the world, leading a wave of anime with female leads.','Magical heroines'],
+'dg':['1999','Digimon Adventure','Children travel to a digital world and bond with creature partners. It grew out of a Bandai virtual-pet toy and later became a worldwide franchise.','Digital companions'],
+'op':['1999','One Piece','Eiichirō Oda\'s pirate adventure began on TV in 1999 and still continues. It is one of Toei\'s longest-running and most successful series.','Pirate adventure'],
+'pc':['2004','Pretty Cure','Starting with Futari wa Pretty Cure, each yearly entry introduces a new team of fighting heroines for young audiences, a long-running Toei tradition.','Heroine teams'],
+'st0':['Step 1','Artists drawing on paper','Key animators draw the main poses; in-betweeners draw the frames in between. Pegs keep the sheets aligned on the light table.',''],
+'st1':['Step 2','Animation cels coloured','Drawings were traced in ink onto transparent celluloid and painted on the back, one cel for each frame.',''],
+'st2':['Step 3','Computer-assisted animation','From the 1990s computers began to help with scanning, inking and colouring, and digital ink-and-paint gradually replaced hand-painted cels.',''],
+'st3':['Step 4','Digital drawing tablets','Artists draw straight into software on pen tablets. Layers, undo and exact colour matching keep large series on schedule.',''],
+'st4':['Step 5','CGI environments','3DCG is used for backgrounds, vehicles and crowds, and recent films blend 2D characters with 3D camera moves, as in Dragon Ball Super: Broly (2018).',''],
+'st5':['Step 6','Digital compositing','Characters, backgrounds, light and effects are combined as digital layers, then graded to give each shot its final look.',''],
+'st6':['Step 7','Modern production workflow','Storyboards, layout, key and in-between animation, colour, CG, compositing and editing are tracked digitally, so teams can share work across studios.',''],
+'ch0':['Channel','Television broadcasting','Weekly TV series are Toei\'s backbone. Dubbed or subtitled series have aired across Asia, Europe and the Americas.',''],
+'ch1':['Channel','Cinema releases','Films from The White Snake onward reach theatres, and long-running series return each year with a new movie.',''],
+'ch2':['Channel','Online streaming','Streaming lets viewers in many countries watch new episodes shortly after Japan, with subtitles and dubs.',''],
+'ch3':['Channel','DVD and Blu-ray','Home video gave fans collectable box sets, extras and a way to watch whole series.',''],
+'ch4':['Channel','Video games','Games let fans step into their favourite worlds, and play brings fans back to the anime.',''],
+'ch5':['Channel','Merchandise and licensing','Toys, clothes, stationery and collaborations extend each story into everyday life.',''],
+'v0':['Value','Friendship','Digimon Adventure is built on children and partner creatures who grow by looking after each other.',''],
+'v1':['Value','Courage','In Dragon Ball, the hero faces stronger opponents again and again and keeps going.',''],
+'v2':['Value','Perseverance','Saint Seiya\'s knights keep fighting after defeat, drawing strength from their bonds.',''],
+'v3':['Value','Creativity','Toei kept inventing: colour feature films in 1958, TV series in the 1960s, 3DCG blends today.',''],
+'v4':['Value','Cultural exchange','Mazinger Z in Italy and Saint Seiya in France turned Japanese stories into shared childhood memories.',''],
+'v5':['Value','Imagination','Galaxy Express 999 sends a boy across the stars on a train, a way of thinking about life and memory.',''],
+'v6':['Value','Global communities','Fans organise conventions, share art and subtitles, and gather around One Piece and Sailor Moon in every language.','']};
+const MV=[['Dragon Ball · 1986','Martial arts hero','"Master Fist" stands in for Dragon Ball\'s fighters. The series put Toei\'s action animation on screens in dozens of countries and is a pillar of its global recognition.'],
+['Sailor Moon · 1992','Magical heroine','"Starlight Sprite" nods to Sailor Moon. This magical-girl team showed that a series led by girls could be a worldwide hit and shaped the genre for decades.'],
+['One Piece · 1999','Adventurous pirate','"Captain Hatless" (he lost the hat) nods to One Piece, Toei\'s epic of friendship and the sea, still running and one of the studio\'s biggest earners.'],
+['Digimon Adventure · 1999','Digital monster trainer','"Blobmon" stands for Digimon. Kids and their digital partners made the show a worldwide favourite and a model for creature-collecting franchises.']];
+const SC=[{id:'s0',y:'1948',n:'Beginning',d:21},{id:'s1',y:'1956',n:'Legacy',d:17},{id:'s2',y:'1986',n:'Golden era',d:22},{id:'s3',y:'1990s+',n:'Digital',d:20},{id:'s4',y:'Today',n:'The world',d:18},{id:'s5',y:'Impact',n:'Society',d:20},{id:'s6',y:'2026',n:'Tribute',d:24}];
+const S={cur:-1,t:0,play:true,started:false,hold:0,snd:false,rm:matchMedia('(prefers-reduced-motion: reduce)').matches,timers:[]};
+let mvOpen=false;
+// panel
+const panel=$('#panel');
+function openInfo(k){const d=INFO[k];if(!d)return;$('#p-yr').textContent=d[0];$('#p-h').textContent=d[1];$('#p-p').textContent=d[2];const c=$('#p-c');c.textContent=d[3];c.hidden=!d[3];panel.classList.add('show');blip(660)}
+function closeInfo(){panel.classList.remove('show')}
+$('.x',panel).onclick=closeInfo;
+document.addEventListener('click',e=>{const t=e.target.closest('[data-info]');if(t){openInfo(t.dataset.info);$$('.hl',t.parentElement).forEach(x=>x.classList.remove('hl'));t.classList.add('hl');return}
+ if(!e.target.closest('#panel'))closeInfo()});
+document.addEventListener('keydown',e=>{const t=e.target;if((e.key==='Enter'||e.key===' ')&&t.matches&&t.matches('g[data-info]')){e.preventDefault();openInfo(t.dataset.info)}});
+// timeline
+const tl=$('#tl');SC.forEach((s,i)=>{const b=document.createElement('button');b.innerHTML=`<b>${s.y}</b><span>${s.n}</span>`;b.onclick=()=>go(i);tl.append(b)});
+function wipe(i){const w=$('#wipe');if(S.rm)return;w.classList.remove('go');void w.offsetWidth;w.style.display=i===1?'flex':'';w.classList.add('go');w.querySelector('svg').style.opacity=(i===1)?1:0}
+function go(i){if(!S.started||i<0||i>=SC.length)return;closeInfo();clearTimers();const first=S.cur<0;S.cur=i;S.t=0;
+ if(!first)wipe(i);
+ setTimeout(()=>{$$('.scene').forEach(s=>s.classList.remove('on'));$('#'+SC[i].id).classList.add('on');$$('#tl button').forEach((b,j)=>{b.classList.toggle('cur',j===i);b.classList.toggle('done',j<i)});enter(i);},first||S.rm?0:450);
+ if(S.snd)setScale(i)}
+function clearTimers(){S.timers.forEach(clearInterval);S.timers=[]}
+function cycle(sel,ms,fn,start=3000){const els=$$(sel);let k=0;const to=setTimeout(()=>{const iv=setInterval(()=>{if(!S.play||S.rm)return;els.forEach(x=>x.classList.remove('hl'));const e=els[k%els.length];e.classList.add('hl');fn&&fn(e,k%els.length);k++},ms);S.timers.push(iv)},start);S.timers.push(to)}
+function enter(i){mode=['dust','spark','confetti','pixels','glow','petal','star'][i];
+ if(i===1)cycle('#reelrow .card',2400,null,3500);
+ if(i===2)cycle('#gold .card',2200,null,7000);
+ if(i===3)cycle('#steps .step',2200,null,2500);
+ if(i===5)cycle('#vals .vchip',3000,(e)=>{$('#valnote').textContent=INFO[e.dataset.info][2]},4500);
+ if(i===4)hubReset();if(i===6)finReset()}
+// controls
+function setPlay(p){S.play=p;$('#stage').classList.toggle('paused',!p);const b=$('#bPlay');b.textContent=p?'❚❚ Pause':'▶ Play';b.setAttribute('aria-label',p?'Pause':'Play');if(S.snd&&actx)p?actx.resume():actx.suspend()}
+$('#bPlay').onclick=()=>setPlay(!S.play);
+$('#bRe').onclick=()=>{if(mvOpen)toggleMv(false);go(0);setPlay(!S.rm)};
+$('#replay').onclick=()=>{go(0);setPlay(true)};
+$('#bNext').onclick=()=>go(Math.min(S.cur+1,SC.length-1));$('#bPrev').onclick=()=>go(Math.max(S.cur-1,0));
+function setRm(v){S.rm=v;document.body.classList.toggle('rm',v);$('#bRm').setAttribute('aria-pressed',v);if(v)setPlay(false)}
+$('#bRm').onclick=()=>{setRm(!S.rm);if(S.started)go(Math.max(S.cur,0))};
+function toggleMv(v){mvOpen=v;$('#mv').hidden=!v;$('#bMv').setAttribute('aria-pressed',v);$('#bMv').textContent=v?'✕ Close':'✦ Multiverse';blip(880)}
+$('#bMv').onclick=()=>toggleMv(!mvOpen);
+$$('.mvc').forEach(b=>b.onclick=()=>{const m=MV[b.dataset.mv];$$('.mvc').forEach(x=>x.classList.remove('hl'));b.classList.add('hl');$('#mvinfo').innerHTML=`<i style="font-family:var(--mono);color:#7a1410">${m[0]}</i><h3 style="font-size:1.5rem;color:#7a1410;margin:2px 0 6px">${m[1]}</h3><p style="line-height:1.55">${m[2]}</p>`;blip(520+b.dataset.mv*110)});
+$('#egg').onclick=()=>{$('#eggbox').hidden=false;blip(990);blip(330)};
+$('#cmpr').oninput=e=>$('#cmp').style.setProperty('--p',e.target.value+'%');
+$('#go').onclick=()=>{S.started=true;$('#start').remove();if(S.rm)setRm(true);else setPlay(true);go(0);requestAnimationFrame(tick)};
+document.addEventListener('keydown',e=>{if(!S.started)return;if(e.key==='ArrowRight')go(Math.min(S.cur+1,6));if(e.key==='ArrowLeft')go(Math.max(S.cur-1,0));if(e.key===' '&&e.target.tagName!=='BUTTON'&&e.target.tagName!=='INPUT'){e.preventDefault();setPlay(!S.play)}if(e.key==='Escape'){closeInfo();if(mvOpen)toggleMv(false)}});
+let wl=0;addEventListener('wheel',e=>{if(!S.started||mvOpen||Date.now()-wl<1000||Math.abs(e.deltaY)<20)return;const sc=$('.scene.on');if(!sc)return;const atEnd=sc.scrollTop+sc.clientHeight>=sc.scrollHeight-4,atTop=sc.scrollTop<=0;
+ if(e.deltaY>0&&atEnd){wl=Date.now();go(Math.min(S.cur+1,6))}else if(e.deltaY<0&&atTop){wl=Date.now();go(Math.max(S.cur-1,0))}},{passive:true});
+let tx=0;addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});addEventListener('touchend',e=>{if(!S.started||mvOpen)return;const dx=e.changedTouches[0].clientX-tx;if(Math.abs(dx)>80)go(dx<0?Math.min(S.cur+1,6):Math.max(S.cur-1,0))},{passive:true});
+// main clock
+let last=0;function tick(ts){requestAnimationFrame(tick);const dt=Math.min(.1,(ts-last)/1000||0);last=ts;
+ if(S.cur>=0&&S.play&&!mvOpen&&!panel.classList.contains('show')){S.t+=dt;if(S.t>SC[S.cur].d&&S.cur<SC.length-1&&!speaking)go(S.cur+1)}
+ const tot=SC.reduce((a,s)=>a+s.d,0);const before=SC.slice(0,Math.max(S.cur,0)).reduce((a,s)=>a+s.d,0);$('#prog').style.width=(100*(before+Math.min(S.t,SC[Math.max(S.cur,0)].d))/tot)+'%';
+ drawFx(dt,ts/1000);if(S.cur===4)drawGlobe(S.t);if(S.cur===6)drawFin(S.t)}
+// audio: small generated chiptune loop
+let actx,master,step=0,siv;const ROOTS=[220,196,262,247,233,220,262],PENT=[0,2,4,7,9,12,9,7];
+function setScale(){}
+function blip(f){if(!S.snd||!actx)return;const o=actx.createOscillator(),g=actx.createGain();o.type='square';o.frequency.value=f;g.gain.setValueAtTime(.06,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.18);o.connect(g).connect(master);o.start();o.stop(actx.currentTime+.2)}
+function note(f,d,type,v){const o=actx.createOscillator(),g=actx.createGain(),t=actx.currentTime;o.type=type;o.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0005,t+d);o.connect(g).connect(master);o.start(t);o.stop(t+d)}
+function music(){if(!S.play||!actx)return;const r=ROOTS[Math.max(S.cur,0)];const n=PENT[step%8];note(r*Math.pow(2,n/12),.28,'triangle',.07);if(step%4===0)note(r/2,.5,'sine',.1);if(step%8===6)note(r*2*Math.pow(2,PENT[(step+3)%8]/12),.2,'square',.025);step++}
+$('#bSnd').onclick=()=>{S.snd=!S.snd;const b=$('#bSnd');b.setAttribute('aria-pressed',S.snd);b.textContent=S.snd?'♪ Sound on':'♪ Sound off';
+ if(S.snd){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();master=master||Object.assign(actx.createGain(),{});master.gain.value=.7;master.connect(actx.destination);actx.resume();clearInterval(siv);siv=setInterval(music,230);blip(740)}catch(e){S.snd=false;b.textContent='♪ Unavailable'}}
+ else{clearInterval(siv)}};
+</script>
+<script>
+let mode='dust';
+const fx=$('#fx'),fc=fx.getContext('2d');let P=[],W=0,H=0,dpr=1;
+function size(){dpr=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;fx.width=W*dpr;fx.height=H*dpr;fc.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener('resize',size);size();
+const COLS={dust:['#d9c797','#fff6c9'],spark:['#ffd23f','#ff3b30','#fff'],confetti:['#ff3b30','#ffd23f','#22d3ee','#ff4fa3','#7CFC9a'],pixels:['#22d3ee','#7CFC9a','#fff'],glow:['#22d3ee','#ffd23f','#ff4fa3'],petal:['#ff4fa3','#ffc2e0','#fff'],star:['#ffd23f','#fff','#22d3ee']};
+function spawn(){const c=COLS[mode],col=c[Math.random()*c.length|0];let p={x:Math.random()*W,y:Math.random()*H,vx:0,vy:0,r:2+Math.random()*3,l:0,max:3+Math.random()*3,col,sh:0};
+ if(mode==='dust'){p.vy=-6-Math.random()*8;p.vx=(Math.random()-.5)*6;p.r=1+Math.random()*2}
+ else if(mode==='spark'){p.y=H+10;p.vy=-80-Math.random()*120;p.vx=(Math.random()-.5)*40;p.r=1.5+Math.random()*2}
+ else if(mode==='confetti'){p.y=-10;p.vy=60+Math.random()*100;p.vx=(Math.random()-.5)*60;p.sh=1;p.r=4+Math.random()*5}
+ else if(mode==='pixels'){p.y=H+10;p.vy=-50-Math.random()*60;p.r=3+Math.random()*4;p.sh=2}
+ else if(mode==='glow'){p.vx=(Math.random()-.5)*20;p.vy=(Math.random()-.5)*20;p.r=2+Math.random()*4;p.sh=3}
+ else if(mode==='petal'){p.y=-10;p.vy=30+Math.random()*40;p.vx=20+Math.random()*30;p.sh=4;p.r=5+Math.random()*5}
+ else{p.sh=5;p.r=2+Math.random()*3;p.vx=(Math.random()-.5)*10;p.vy=(Math.random()-.5)*10}
+ P.push(p)}
+function drawFx(dt,t){fc.clearRect(0,0,W,H);if(S.rm||S.cur<0)return;if(S.play&&P.length<(mode==='dust'?60:90)&&Math.random()<.5)spawn();
+ for(let i=P.length-1;i>=0;i--){const p=P[i];if(S.play){p.l+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;if(p.sh===4)p.x+=Math.sin(t*2+i)*.6}
+  const a=Math.min(1,p.l*2,(p.max-p.l)/1)*(mode==='dust'?.5:.9);if(p.l>p.max||p.y<-20||p.y>H+20){P.splice(i,1);continue}
+  fc.globalAlpha=Math.max(0,a);fc.fillStyle=p.col;
+  if(p.sh===1){fc.save();fc.translate(p.x,p.y);fc.rotate(t*3+i);fc.fillRect(-p.r,-p.r/2,p.r*2,p.r);fc.restore()}
+  else if(p.sh===2)fc.fillRect(p.x|0,p.y|0,p.r,p.r);
+  else if(p.sh===3||p.sh===5){fc.shadowColor=p.col;fc.shadowBlur=14;fc.beginPath();fc.arc(p.x,p.y,p.r*(p.sh===5?(.6+.4*Math.sin(t*4+i)):1),0,7);fc.fill();fc.shadowBlur=0}
+  else if(p.sh===4){fc.beginPath();fc.ellipse(p.x,p.y,p.r,p.r/2,t+i,0,7);fc.fill()}
+  else{fc.beginPath();fc.arc(p.x,p.y,p.r,0,7);fc.fill()}}
+ fc.globalAlpha=1}
+// ---- channel hub
+const CH=['Television','Cinema','Streaming','DVD / Blu-ray','Video games','Merchandise'];const NS='http://www.w3.org/2000/svg';
+function hubReset(){const L=$('#hubl'),N=$('#hubn');L.innerHTML='';N.innerHTML='';const pts=CH.map((c,i)=>{const a=-Math.PI/2+i*Math.PI/3;return [220+Math.cos(a)*145,200+Math.sin(a)*145*.95]});
+ const add=(p,x)=>{const e=document.createElementNS(NS,p);for(const k in x)e.setAttribute(k,x[k]);return e};
+ pts.forEach((p,i)=>{const q=pts[(i+1)%6];const l=add('line',{x1:220,y1:200,x2:p[0],y2:p[1],'stroke-dasharray':'8 6'});l.style.animation=`dashmove 1.4s linear infinite`;L.append(l);const r=add('line',{x1:p[0],y1:p[1],x2:q[0],y2:q[1],'stroke-dasharray':'3 6'});L.append(r)});
+ pts.forEach((p,i)=>{const g=add('g',{tabindex:0,role:'button','data-info':'ch'+i,'aria-label':CH[i],style:'cursor:pointer;opacity:0;animation:rise .7s '+(1.4+i*.5)+'s forwards'});
+  g.append(add('circle',{cx:p[0],cy:p[1],r:36,fill:['#ff3b30','#ffd23f','#22d3ee','#ff4fa3','#7CFC9a','#ff8a1f'][i],stroke:'#fff','stroke-width':3}));
+  const words=CH[i].split(' / ').length>1?['DVD','Blu-ray']:CH[i].split(' ');words.forEach((w,k)=>{const t=add('text',{x:p[0],y:p[1]+4+(k-(words.length-1)/2)*13,'text-anchor':'middle','font-size':11,fill:'#111','font-weight':'bold'});t.textContent=w;g.append(t)});N.append(g)})}
+const st=document.createElement('style');st.textContent='@keyframes dashmove{to{stroke-dashoffset:-28}}';document.head.append(st);
+// ---- globe
+const gc=$('#globe'),gx=gc.getContext('2d');
+const LAND=[[[-168,66],[-140,70],[-95,72],[-80,63],[-62,58],[-55,48],[-70,42],[-80,30],[-97,18],[-90,15],[-80,8],[-105,20],[-118,33],[-125,48],[-135,58]],
+[[-80,8],[-60,10],[-35,-6],[-40,-22],[-58,-38],[-68,-54],[-74,-45],[-72,-20],[-80,-5]],
+[[-10,36],[-9,44],[-2,48],[5,54],[10,58],[28,70],[40,66],[45,50],[40,42],[28,40],[20,38],[10,44],[-5,36]],
+[[-17,15],[-10,35],[10,37],[32,31],[43,12],[51,11],[40,-10],[35,-25],[20,-35],[12,-18],[8,4],[-8,5]],
+[[40,42],[45,50],[60,70],[100,76],[140,72],[180,66],[160,55],[142,46],[130,34],[122,30],[110,20],[105,10],[100,2],[90,22],[78,8],[68,22],[56,26],[45,14],[35,30]],
+[[114,-22],[130,-12],[142,-11],[153,-26],[146,-39],[135,-34],[115,-34]]];
+const JP=[[130,31],[132,34],[137,36],[140,41],[142,40],[141,36],[139,34],[135,33]];
+const CITY=[['Paris',2.3,48.9],['New York',-74,40.7],['São Paulo',-46.6,-23.5],['Manila',121,14.6],['Cairo',31.2,30],['Sydney',151,-33.9],['Mexico City',-99,19.4]];
+const TOK=[139.7,35.7],rad=Math.PI/180;
+function proj(lon,lat,l0,R,cx,cy){const la=lat*rad,lo=(lon-l0)*rad,tilt=-20*rad,x=Math.cos(la)*Math.sin(lo),y0=Math.sin(la),z0=Math.cos(la)*Math.cos(lo);
+ const y=y0*Math.cos(tilt)-z0*Math.sin(tilt),z=y0*Math.sin(tilt)+z0*Math.cos(tilt);return{x:cx+x*R,y:cy-y*R,z,vx:x,vy:y}}
+function inP(pt,lo,la){let c=false;for(let i=0,j=pt.length-1;i<pt.length;j=i++){const a=pt[i],b=pt[j];if((a[1]>la)!=(b[1]>la)&&lo<(b[0]-a[0])*(la-a[1])/(b[1]-a[1])+a[0])c=!c}return c}
+const DOTS=[];for(let la=-60;la<=76;la+=3.5)for(let lo=-170;lo<=180;lo+=3.5/Math.max(.35,Math.cos(la*rad))){if(inP(JP,lo,la)){DOTS.push([lo,la,1]);continue}if(LAND.some(p=>inP(p,lo,la)))DOTS.push([lo,la,0])}
+for(let k=0;k<8;k++)for(let m=0;m<4;m++)DOTS.push([130+k*1.4+m*.3,31+m*3.2+k*.2,1]);
+function poly(pts,l0,R,cx,cy,fill,stroke){gx.beginPath();pts.forEach((p,i)=>{const q=proj(p[0],p[1],l0,R,cx,cy);let x=q.x,y=q.y;if(q.z<0){const m=Math.hypot(q.vx,q.vy)||1;x=cx+q.vx/m*R;y=cy-q.vy/m*R}i?gx.lineTo(x,y):gx.moveTo(x,y)});gx.closePath();gx.fillStyle=fill;gx.fill();if(stroke){gx.strokeStyle=stroke;gx.lineWidth=2;gx.stroke()}}
+function drawGlobe(t){const w=gc.clientWidth,h=gc.clientHeight;if(!w)return;if(gc.width!==w*dpr){gc.width=w*dpr;gc.height=h*dpr}gx.setTransform(dpr,0,0,dpr,0,0);gx.clearRect(0,0,w,h);
+ const R=w*.42,cx=w/2,cy=h/2,l0=S.rm?110:140-t*13;
+ const g=gx.createRadialGradient(cx-R*.3,cy-R*.3,R*.1,cx,cy,R);g.addColorStop(0,'#2b4fbf');g.addColorStop(1,'#0c1440');gx.beginPath();gx.arc(cx,cy,R,0,7);gx.fillStyle=g;gx.fill();
+ gx.save();gx.beginPath();gx.arc(cx,cy,R,0,7);gx.clip();gx.strokeStyle='#ffffff22';gx.lineWidth=1;
+ for(let lo=-180;lo<180;lo+=30){gx.beginPath();let on=0;for(let la=-90;la<=90;la+=6){const q=proj(lo,la,l0,R,cx,cy);if(q.z>0){on?gx.lineTo(q.x,q.y):gx.moveTo(q.x,q.y);on=1}else on=0}gx.stroke()}
+ for(let la=-60;la<=60;la+=30){gx.beginPath();let on=0;for(let lo=-180;lo<=180;lo+=6){const q=proj(lo,la,l0,R,cx,cy);if(q.z>0){on?gx.lineTo(q.x,q.y):gx.moveTo(q.x,q.y);on=1}else on=0}gx.stroke()}
+ for(const d of DOTS){const q=proj(d[0],d[1],l0,R,cx,cy);if(q.z<=0)continue;gx.fillStyle=d[2]?'#ff3b30':'#7be3a0';gx.globalAlpha=.35+.65*q.z;gx.beginPath();gx.arc(q.x,q.y,d[2]?3.2:2,0,7);gx.fill()}gx.globalAlpha=1;gx.restore();
+ gx.beginPath();gx.arc(cx,cy,R,0,7);gx.strokeStyle='#fff';gx.lineWidth=4;gx.stroke();
+ const a=proj(TOK[0],TOK[1],l0,R,cx,cy);
+ CITY.forEach((c,i)=>{const prog=S.rm?1:Math.max(0,Math.min(1,(t-1.5-i*.8)/2.2));if(prog<=0)return;
+  const A=[TOK[0]*rad,TOK[1]*rad],B=[c[1]*rad,c[2]*rad];const v=(p)=>[Math.cos(p[1])*Math.cos(p[0]),Math.cos(p[1])*Math.sin(p[0]),Math.sin(p[1])];const va=v(A),vb=v(B);
+  const om=Math.acos(Math.max(-1,Math.min(1,va[0]*vb[0]+va[1]*vb[1]+va[2]*vb[2])));let started=0;gx.beginPath();gx.strokeStyle='#ffd23f';gx.lineWidth=2.5;let lastp;
+  for(let k=0;k<=40;k++){const u=k/40*prog,s1=Math.sin((1-u)*om)/Math.sin(om),s2=Math.sin(u*om)/Math.sin(om),X=s1*va[0]+s2*vb[0],Y=s1*va[1]+s2*vb[1],Z=s1*va[2]+s2*vb[2];
+   const lift=1+.25*Math.sin(Math.PI*u);const lo=Math.atan2(Y,X)/rad,la=Math.asin(Z)/rad;const q=proj(lo,la,l0,R,cx,cy);const qx=cx+(q.x-cx)*lift,qy=cy+(q.y-cy)*lift;lastp=[qx,qy,q.z];if(q.z>0){started?gx.lineTo(qx,qy):gx.moveTo(qx,qy);started=1}else started=0}
+  gx.stroke();const q=proj(c[1],c[2],l0,R,cx,cy);if(q.z>0&&prog>.95){gx.fillStyle='#fff';gx.beginPath();gx.arc(q.x,q.y,5,0,7);gx.fill();gx.font='12px DotGothic16,monospace';gx.fillText(c[0],q.x+8,q.y-6)}
+  if(lastp&&lastp[2]>0&&prog<1){gx.fillStyle='#fff';gx.beginPath();gx.arc(lastp[0],lastp[1],4,0,7);gx.fill()}});
+ if(a.z>0){gx.strokeStyle='#fff';gx.lineWidth=2;gx.beginPath();gx.arc(a.x,a.y,8+(S.rm?0:(t*12)%14),0,7);gx.stroke();gx.fillStyle='#fff';gx.font='bold 13px DotGothic16,monospace';gx.fillText('TOKYO',a.x+12,a.y+4)}}
+// ---- finale constellation
+const fcn=$('#fin'),fcx=fcn.getContext('2d');let NODES=[],IMGS=[];
+(function(){['hero','heroine','robot','pirate','digi'].forEach(id=>{const s=$('#'+id).innerHTML.replace(/class="ol"/g,'stroke="#15110a" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"');const im=new Image();im.src='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 260" width="200" height="260">'+s+'</svg>');IMGS.push(im)})})();
+function finReset(){NODES=[];const N=110;for(let i=0;i<N;i++){const a=i*2.39996,r=Math.sqrt(i/N);NODES.push({a,r,d:Math.random()*2.5,rot:(Math.random()-.5)*6,img:i%3===0?IMGS[(i/3|0)%5]:null,col:['#ffd23f','#22d3ee','#ff4fa3','#fff','#7CFC9a'][i%5]})}}
+function drawFin(t){const w=fcn.clientWidth,h=fcn.clientHeight;if(!w)return;if(fcn.width!==w*dpr){fcn.width=w*dpr;fcn.height=h*dpr}fcx.setTransform(dpr,0,0,dpr,0,0);
+ const g=fcx.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.max(w,h)*.7);g.addColorStop(0,'#2a1b5e');g.addColorStop(1,'#05040b');fcx.fillStyle=g;fcx.fillRect(0,0,w,h);
+ const T=S.rm?9:t,cam=3.2-2.2*ease(Math.min(1,T/6)),Rm=Math.min(w,h)*.46;fcx.save();fcx.translate(w/2,h/2);fcx.scale(cam,cam);fcx.rotate(S.rm?0:T*.02);
+ const pos=NODES.map(n=>{const p=ease(Math.max(0,Math.min(1,(T-n.d)/2.5)));return{x:Math.cos(n.a)*n.r*Rm*1.15*p,y:Math.sin(n.a)*n.r*Rm*.9*p,p}});
+ fcx.lineWidth=1/cam;pos.forEach((p,i)=>{for(const j of [i+1,i+5,i+8]){const q=pos[j];if(!q)continue;const al=Math.min(p.p,q.p)*.28*Math.min(1,Math.max(0,(T-3)/2));fcx.strokeStyle='rgba(255,230,150,'+al+')';fcx.beginPath();fcx.moveTo(p.x,p.y);fcx.lineTo(q.x,q.y);fcx.stroke()}});
+ NODES.forEach((n,i)=>{const p=pos[i],mix=Math.max(0,Math.min(1,(T-n.d-1.5)/1.5));fcx.save();fcx.translate(p.x,p.y);
+  if(n.img&&n.img.complete){const s=(34+n.r*22)/cam*cam;fcx.globalAlpha=p.p*mix;fcx.drawImage(n.img,-s*.38,-s*.5,s*.76,s)}
+  fcx.globalAlpha=p.p*(1-mix*.6);fcx.rotate(n.rot*(1-p.p));fcx.strokeStyle='#fff';fcx.fillStyle='#fff2';fcx.lineWidth=2/cam;const fw=26,fh=18;if(mix<1){fcx.fillRect(-fw/2,-fh/2,fw,fh);fcx.strokeRect(-fw/2,-fh/2,fw,fh)}
+  fcx.globalAlpha=p.p*mix;fcx.fillStyle=n.col;fcx.shadowColor=n.col;fcx.shadowBlur=10;fcx.beginPath();fcx.arc(0,n.img?22:0,2.4+((i*7)%3),0,7);fcx.fill();fcx.restore()});fcx.restore()}
+function ease(x){return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2}
+</script>
+<script>
+const NARR=[
+"Every legend has a beginning. In 1948, a small company called Nihon Dōga was founded in Japan, with the ambition of making animation at feature scale. Every frame was drawn by hand, on paper, under the lights of a camera stand. Only in 1956, when Toei Company acquired the studio, did it become Toei Dōga.",
+"In 1958, The White Snake became Japan's first full-length colour animated feature. In 1963, Ken, the Wild Boy brought weekly television. Mazinger Z in 1972 and Galaxy Express 999 in 1979 carried the studio's stories across Europe, the Americas and beyond.",
+"Then came the golden era. Dragon Ball and Saint Seiya in 1986. Sailor Moon in 1992. Digimon Adventure and One Piece in 1999, and Pretty Cure in 2004. These heroes, pirates and magical heroines made Toei's name known in living rooms all over the world.",
+"Pencil, paper and painted cels gave way to computers, drawing tablets, three-D environments and digital compositing. The tools changed completely, but every production still begins with a single drawing.",
+"Today, Toei's stories travel by television, cinema, streaming, home video, games and merchandise. Each channel feeds the others, and digital technology lets audiences everywhere watch together.",
+"These stories teach friendship, courage and perseverance. They spark creativity, encourage cultural exchange, and build communities of fans around the globe. Toei's philosophy says it all: delivering dreams and hope to children and people around the world.",
+"From a single drawing to millions of dreams. Toei Animation: a legacy that continues. Nineteen forty-eight to twenty twenty-six."];
+let speaking=false,voiceOn=!!window.speechSynthesis,uttT=0;const cap=$('#cap');
+function pickVoice(){const v=speechSynthesis.getVoices();return v.find(x=>/en-GB/i.test(x.lang)&&/natural|google|daniel|samantha|female/i.test(x.name))||v.find(x=>/^en/i.test(x.lang))||null}
+function stopSpeech(){try{speechSynthesis.cancel()}catch(e){}speaking=false;cap.classList.remove('on')}
+function speak(i){stopSpeech();if(!voiceOn||!window.speechSynthesis||!S.started)return;const tok=++uttT;
+ cap.textContent=NARR[i];cap.classList.add('on');speaking=true;
+ setTimeout(()=>{if(tok!==uttT)return;const u=new SpeechSynthesisUtterance(NARR[i]);const v=pickVoice();if(v)u.voice=v;u.lang=v?v.lang:'en-US';u.rate=.95;u.volume=1;
+  u.onerror=ev=>{if(tok!==uttT)return;speaking=false;if(ev.error&&ev.error!=='canceled'&&ev.error!=='interrupted'){cap.textContent='Voice unavailable here ('+ev.error+'). Try opening the page in its own tab, in Chrome, Edge or Safari, with the device volume up.';setTimeout(()=>cap.classList.remove('on'),6000)}};
+  u.onend=()=>{if(tok===uttT){speaking=false;setTimeout(()=>{if(tok===uttT)cap.classList.remove('on')},1200)}};
+  setTimeout(()=>{if(tok===uttT)speaking=false},45000);try{speechSynthesis.resume()}catch(e){}speechSynthesis.speak(u);if(!S.play)speechSynthesis.pause()},150)}
+const _go=go;go=function(i){_go(i);if(S.started&&i>=0&&i<SC.length)setTimeout(()=>speak(i),S.rm?100:700)};
+const _sp=setPlay;setPlay=function(p){_sp(p);if(window.speechSynthesis&&speaking){p?speechSynthesis.resume():speechSynthesis.pause()}};
+const bVo=$('#bVo');function vlabel(){bVo.setAttribute('aria-pressed',voiceOn);bVo.textContent=voiceOn?'🎙 Voice on':'🎙 Voice off'}
+if(!window.speechSynthesis){bVo.hidden=true;voiceOn=false}vlabel();
+bVo.onclick=()=>{voiceOn=!voiceOn;vlabel();if(voiceOn)speak(Math.max(S.cur,0));else stopSpeech()};
+$('#bMv').addEventListener('click',()=>{if(mvOpen)stopSpeech();else if(voiceOn&&S.cur>=0)speak(S.cur)});
+if(window.speechSynthesis)speechSynthesis.onvoiceschanged=()=>{};
+</script>
+
+</body>
+</html>
